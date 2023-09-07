@@ -1,0 +1,552 @@
+@startuml
+namespace gorm {
+    class Association << (S,Aquamarine) >> {
+        + DB *DB
+        + Relationship *schema.Relationship
+        + Unscope bool
+        + Error error
+
+        - saveAssociation(clear bool, values ...<font color=blue>interface</font>{}) 
+        - buildCondition() *DB
+
+        + Unscoped() *Association
+        + Find(out <font color=blue>interface</font>{}, conds ...<font color=blue>interface</font>{}) error
+        + Append(values ...<font color=blue>interface</font>{}) error
+        + Replace(values ...<font color=blue>interface</font>{}) error
+        + Delete(values ...<font color=blue>interface</font>{}) error
+        + Clear() error
+        + Count() int64
+
+    }
+    interface ColumnType  {
+        + Name() string
+        + DatabaseTypeName() string
+        + ColumnType() (string, bool)
+        + PrimaryKey() (bool, bool)
+        + AutoIncrement() (bool, bool)
+        + Length() (int64, bool)
+        + DecimalSize() (int64, int64, bool)
+        + Nullable() (bool, bool)
+        + Unique() (bool, bool)
+        + ScanType() reflect.Type
+        + Comment() (string, bool)
+        + DefaultValue() (string, bool)
+
+    }
+    class Config << (S,Aquamarine) >> {
+        - callbacks *callbacks
+        - cacheStore *sync.Map
+
+        + SkipDefaultTransaction bool
+        + NamingStrategy schema.Namer
+        + FullSaveAssociations bool
+        + Logger logger.Interface
+        + NowFunc <font color=blue>func</font>() time.Time
+        + DryRun bool
+        + PrepareStmt bool
+        + DisableAutomaticPing bool
+        + DisableForeignKeyConstraintWhenMigrating bool
+        + IgnoreRelationshipsWhenMigrating bool
+        + DisableNestedTransaction bool
+        + AllowGlobalUpdate bool
+        + QueryFields bool
+        + CreateBatchSize int
+        + TranslateError bool
+        + ClauseBuilders <font color=blue>map</font>[string]clause.ClauseBuilder
+        + ConnPool ConnPool
+        + Plugins <font color=blue>map</font>[string]Plugin
+
+        + Apply(config *Config) error
+        + AfterInitialize(db *DB) error
+
+    }
+    interface ConnPool  {
+        + PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
+        + ExecContext(ctx context.Context, query string, args ...<font color=blue>interface</font>{}) (sql.Result, error)
+        + QueryContext(ctx context.Context, query string, args ...<font color=blue>interface</font>{}) (*sql.Rows, error)
+        + QueryRowContext(ctx context.Context, query string, args ...<font color=blue>interface</font>{}) *sql.Row
+
+    }
+    interface ConnPoolBeginner  {
+        + BeginTx(ctx context.Context, opts *sql.TxOptions) (ConnPool, error)
+
+    }
+    class DB << (S,Aquamarine) >> {
+        - clone int
+
+        + Error error
+        + RowsAffected int64
+        + Statement *Statement
+
+        - executeScopes() *DB
+        - assignInterfacesToValue(values ...<font color=blue>interface</font>{}) 
+        - getInstance() *DB
+        - scanIntoStruct(rows Rows, reflectValue reflect.Value, values []<font color=blue>interface</font>{}, fields []*schema.Field, joinFields [][]*schema.Field) 
+
+        + Association(column string) *Association
+        + Model(value <font color=blue>interface</font>{}) *DB
+        + Clauses(conds ...clause.Expression) *DB
+        + Table(name string, args ...<font color=blue>interface</font>{}) *DB
+        + Distinct(args ...<font color=blue>interface</font>{}) *DB
+        + Select(query <font color=blue>interface</font>{}, args ...<font color=blue>interface</font>{}) *DB
+        + Omit(columns ...string) *DB
+        + Where(query <font color=blue>interface</font>{}, args ...<font color=blue>interface</font>{}) *DB
+        + Not(query <font color=blue>interface</font>{}, args ...<font color=blue>interface</font>{}) *DB
+        + Or(query <font color=blue>interface</font>{}, args ...<font color=blue>interface</font>{}) *DB
+        + Joins(query string, args ...<font color=blue>interface</font>{}) *DB
+        + InnerJoins(query string, args ...<font color=blue>interface</font>{}) *DB
+        + Group(name string) *DB
+        + Having(query <font color=blue>interface</font>{}, args ...<font color=blue>interface</font>{}) *DB
+        + Order(value <font color=blue>interface</font>{}) *DB
+        + Limit(limit int) *DB
+        + Offset(offset int) *DB
+        + Scopes(funcs ...<font color=blue>func</font>(*DB) *DB) *DB
+        + Preload(query string, args ...<font color=blue>interface</font>{}) *DB
+        + Attrs(attrs ...<font color=blue>interface</font>{}) *DB
+        + Assign(attrs ...<font color=blue>interface</font>{}) *DB
+        + Unscoped() *DB
+        + Raw(sql string, values ...<font color=blue>interface</font>{}) *DB
+        + Create(value <font color=blue>interface</font>{}) *DB
+        + CreateInBatches(value <font color=blue>interface</font>{}, batchSize int) *DB
+        + Save(value <font color=blue>interface</font>{}) *DB
+        + First(dest <font color=blue>interface</font>{}, conds ...<font color=blue>interface</font>{}) *DB
+        + Take(dest <font color=blue>interface</font>{}, conds ...<font color=blue>interface</font>{}) *DB
+        + Last(dest <font color=blue>interface</font>{}, conds ...<font color=blue>interface</font>{}) *DB
+        + Find(dest <font color=blue>interface</font>{}, conds ...<font color=blue>interface</font>{}) *DB
+        + FindInBatches(dest <font color=blue>interface</font>{}, batchSize int, fc <font color=blue>func</font>(*DB, int) error) *DB
+        + FirstOrInit(dest <font color=blue>interface</font>{}, conds ...<font color=blue>interface</font>{}) *DB
+        + FirstOrCreate(dest <font color=blue>interface</font>{}, conds ...<font color=blue>interface</font>{}) *DB
+        + Update(column string, value <font color=blue>interface</font>{}) *DB
+        + Updates(values <font color=blue>interface</font>{}) *DB
+        + UpdateColumn(column string, value <font color=blue>interface</font>{}) *DB
+        + UpdateColumns(values <font color=blue>interface</font>{}) *DB
+        + Delete(value <font color=blue>interface</font>{}, conds ...<font color=blue>interface</font>{}) *DB
+        + Count(count *int64) *DB
+        + Row() *sql.Row
+        + Rows() (*sql.Rows, error)
+        + Scan(dest <font color=blue>interface</font>{}) *DB
+        + Pluck(column string, dest <font color=blue>interface</font>{}) *DB
+        + ScanRows(rows *sql.Rows, dest <font color=blue>interface</font>{}) error
+        + Connection(fc <font color=blue>func</font>(*DB) error) error
+        + Transaction(fc <font color=blue>func</font>(*DB) error, opts ...*sql.TxOptions) error
+        + Begin(opts ...*sql.TxOptions) *DB
+        + Commit() *DB
+        + Rollback() *DB
+        + SavePoint(name string) *DB
+        + RollbackTo(name string) *DB
+        + Exec(sql string, values ...<font color=blue>interface</font>{}) *DB
+        + Session(config *Session) *DB
+        + WithContext(ctx context.Context) *DB
+        + Debug() *DB
+        + Set(key string, value <font color=blue>interface</font>{}) *DB
+        + Get(key string) (<font color=blue>interface</font>{}, bool)
+        + InstanceSet(key string, value <font color=blue>interface</font>{}) *DB
+        + InstanceGet(key string) (<font color=blue>interface</font>{}, bool)
+        + Callback() *callbacks
+        + AddError(err error) error
+        + DB() (*sql.DB, error)
+        + SetupJoinTable(model <font color=blue>interface</font>{}, field string, joinTable <font color=blue>interface</font>{}) error
+        + Use(plugin Plugin) error
+        + ToSQL(queryFn <font color=blue>func</font>(*DB) *DB) string
+        + Migrator() Migrator
+        + AutoMigrate(dst ...<font color=blue>interface</font>{}) error
+
+    }
+    class DeletedAt << (S,Aquamarine) >> {
+        + Scan(value <font color=blue>interface</font>{}) error
+        + Value() (driver.Value, error)
+        + MarshalJSON() ([]byte, error)
+        + UnmarshalJSON(b []byte) error
+        + QueryClauses(f *schema.Field) []clause.Interface
+        + UpdateClauses(f *schema.Field) []clause.Interface
+        + DeleteClauses(f *schema.Field) []clause.Interface
+
+    }
+    interface Dialector  {
+        + Name() string
+        + Initialize( *DB) error
+        + Migrator(db *DB) Migrator
+        + DataTypeOf( *schema.Field) string
+        + DefaultValueOf( *schema.Field) clause.Expression
+        + BindVarTo(writer clause.Writer, stmt *Statement, v <font color=blue>interface</font>{}) 
+        + QuoteTo( clause.Writer,  string) 
+        + Explain(sql string, vars ...<font color=blue>interface</font>{}) string
+
+    }
+    interface ErrorTranslator  {
+        + Translate(err error) error
+
+    }
+    interface GetDBConnector  {
+        + GetDBConn() (*sql.DB, error)
+
+    }
+    interface Index  {
+        + Table() string
+        + Name() string
+        + Columns() []string
+        + PrimaryKey() (bool, bool)
+        + Unique() (bool, bool)
+        + Option() string
+
+    }
+    interface Migrator  {
+        + AutoMigrate(dst ...<font color=blue>interface</font>{}) error
+        + CurrentDatabase() string
+        + FullDataTypeOf( *schema.Field) clause.Expr
+        + GetTypeAliases(databaseTypeName string) []string
+        + CreateTable(dst ...<font color=blue>interface</font>{}) error
+        + DropTable(dst ...<font color=blue>interface</font>{}) error
+        + HasTable(dst <font color=blue>interface</font>{}) bool
+        + RenameTable(oldName <font color=blue>interface</font>{}, newName <font color=blue>interface</font>{}) error
+        + GetTables() ([]string, error)
+        + TableType(dst <font color=blue>interface</font>{}) (TableType, error)
+        + AddColumn(dst <font color=blue>interface</font>{}, field string) error
+        + DropColumn(dst <font color=blue>interface</font>{}, field string) error
+        + AlterColumn(dst <font color=blue>interface</font>{}, field string) error
+        + MigrateColumn(dst <font color=blue>interface</font>{}, field *schema.Field, columnType ColumnType) error
+        + HasColumn(dst <font color=blue>interface</font>{}, field string) bool
+        + RenameColumn(dst <font color=blue>interface</font>{}, oldName string, field string) error
+        + ColumnTypes(dst <font color=blue>interface</font>{}) ([]ColumnType, error)
+        + CreateView(name string, option ViewOption) error
+        + DropView(name string) error
+        + CreateConstraint(dst <font color=blue>interface</font>{}, name string) error
+        + DropConstraint(dst <font color=blue>interface</font>{}, name string) error
+        + HasConstraint(dst <font color=blue>interface</font>{}, name string) bool
+        + CreateIndex(dst <font color=blue>interface</font>{}, name string) error
+        + DropIndex(dst <font color=blue>interface</font>{}, name string) error
+        + HasIndex(dst <font color=blue>interface</font>{}, name string) bool
+        + RenameIndex(dst <font color=blue>interface</font>{}, oldName string, newName string) error
+        + GetIndexes(dst <font color=blue>interface</font>{}) ([]Index, error)
+
+    }
+    class Model << (S,Aquamarine) >> {
+        + ID uint
+        + CreatedAt time.Time
+        + UpdatedAt time.Time
+        + DeletedAt DeletedAt
+
+    }
+    interface Option  {
+        + Apply( *Config) error
+        + AfterInitialize( *DB) error
+
+    }
+    interface ParamsFilter  {
+        + ParamsFilter(ctx context.Context, sql string, params ...<font color=blue>interface</font>{}) (string, []<font color=blue>interface</font>{})
+
+    }
+    interface Plugin  {
+        + Name() string
+        + Initialize( *DB) error
+
+    }
+    class PreparedStmtDB << (S,Aquamarine) >> {
+        + Stmts <font color=blue>map</font>[string]*Stmt
+        + PreparedSQL []string
+        + Mux *sync.RWMutex
+
+        - prepare(ctx context.Context, conn ConnPool, isTransaction bool, query string) (Stmt, error)
+
+        + GetDBConn() (*sql.DB, error)
+        + Close() 
+        + Reset() 
+        + BeginTx(ctx context.Context, opt *sql.TxOptions) (ConnPool, error)
+        + ExecContext(ctx context.Context, query string, args ...<font color=blue>interface</font>{}) (sql.Result, error)
+        + QueryContext(ctx context.Context, query string, args ...<font color=blue>interface</font>{}) (*sql.Rows, error)
+        + QueryRowContext(ctx context.Context, query string, args ...<font color=blue>interface</font>{}) *sql.Row
+
+    }
+    class PreparedStmtTX << (S,Aquamarine) >> {
+        + PreparedStmtDB *PreparedStmtDB
+
+        + GetDBConn() (*sql.DB, error)
+        + Commit() error
+        + Rollback() error
+        + ExecContext(ctx context.Context, query string, args ...<font color=blue>interface</font>{}) (sql.Result, error)
+        + QueryContext(ctx context.Context, query string, args ...<font color=blue>interface</font>{}) (*sql.Rows, error)
+        + QueryRowContext(ctx context.Context, query string, args ...<font color=blue>interface</font>{}) *sql.Row
+
+    }
+    interface Rows  {
+        + Columns() ([]string, error)
+        + ColumnTypes() ([]*sql.ColumnType, error)
+        + Next() bool
+        + Scan(dest ...<font color=blue>interface</font>{}) error
+        + Err() error
+        + Close() error
+
+    }
+    interface SavePointerDialectorInterface  {
+        + SavePoint(tx *DB, name string) error
+        + RollbackTo(tx *DB, name string) error
+
+    }
+    class Session << (S,Aquamarine) >> {
+        + DryRun bool
+        + PrepareStmt bool
+        + NewDB bool
+        + Initialized bool
+        + SkipHooks bool
+        + SkipDefaultTransaction bool
+        + DisableNestedTransaction bool
+        + AllowGlobalUpdate bool
+        + FullSaveAssociations bool
+        + QueryFields bool
+        + Context context.Context
+        + Logger logger.Interface
+        + NowFunc <font color=blue>func</font>() time.Time
+        + CreateBatchSize int
+
+    }
+    class SoftDeleteDeleteClause << (S,Aquamarine) >> {
+        + ZeroValue sql.NullString
+        + Field *schema.Field
+
+        + Name() string
+        + Build( clause.Builder) 
+        + MergeClause( *clause.Clause) 
+        + ModifyStatement(stmt *Statement) 
+
+    }
+    class SoftDeleteQueryClause << (S,Aquamarine) >> {
+        + ZeroValue sql.NullString
+        + Field *schema.Field
+
+        + Name() string
+        + Build( clause.Builder) 
+        + MergeClause( *clause.Clause) 
+        + ModifyStatement(stmt *Statement) 
+
+    }
+    class SoftDeleteUpdateClause << (S,Aquamarine) >> {
+        + ZeroValue sql.NullString
+        + Field *schema.Field
+
+        + Name() string
+        + Build( clause.Builder) 
+        + MergeClause( *clause.Clause) 
+        + ModifyStatement(stmt *Statement) 
+
+    }
+    class Statement << (S,Aquamarine) >> {
+        - attrs []<font color=blue>interface</font>{}
+        - assigns []<font color=blue>interface</font>{}
+        - scopes []<font color=blue>func</font>(*DB) *DB
+
+        + TableExpr *clause.Expr
+        + Table string
+        + Model <font color=blue>interface</font>{}
+        + Unscoped bool
+        + Dest <font color=blue>interface</font>{}
+        + ReflectValue reflect.Value
+        + Clauses <font color=blue>map</font>[string]clause.Clause
+        + BuildClauses []string
+        + Distinct bool
+        + Selects []string
+        + Omits []string
+        + Joins []join
+        + Preloads <font color=blue>map</font>[string][]<font color=blue>interface</font>{}
+        + Settings sync.Map
+        + ConnPool ConnPool
+        + Schema *schema.Schema
+        + Context context.Context
+        + RaiseErrorOnNotFound bool
+        + SkipHooks bool
+        + SQL strings.Builder
+        + Vars []<font color=blue>interface</font>{}
+        + CurDestIndex int
+
+        - clone() *Statement
+
+        + WriteString(str string) (int, error)
+        + WriteByte(c byte) error
+        + WriteQuoted(value <font color=blue>interface</font>{}) 
+        + QuoteTo(writer clause.Writer, field <font color=blue>interface</font>{}) 
+        + Quote(field <font color=blue>interface</font>{}) string
+        + AddVar(writer clause.Writer, vars ...<font color=blue>interface</font>{}) 
+        + AddClause(v clause.Interface) 
+        + AddClauseIfNotExists(v clause.Interface) 
+        + BuildCondition(query <font color=blue>interface</font>{}, args ...<font color=blue>interface</font>{}) []clause.Expression
+        + Build(clauses ...string) 
+        + Parse(value <font color=blue>interface</font>{}) error
+        + ParseWithSpecialTableName(value <font color=blue>interface</font>{}, specialTableName string) error
+        + SetColumn(name string, value <font color=blue>interface</font>{}, fromCallbacks ...bool) 
+        + Changed(fields ...string) bool
+        + SelectAndOmitColumns(requireCreate bool, requireUpdate bool) (<font color=blue>map</font>[string]bool, bool)
+
+    }
+    interface StatementModifier  {
+        + ModifyStatement( *Statement) 
+
+    }
+    class Stmt << (S,Aquamarine) >> {
+        - prepared <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - prepareErr error
+
+        + Transaction bool
+
+    }
+    interface TableType  {
+        + Schema() string
+        + Name() string
+        + Type() string
+        + Comment() (string, bool)
+
+    }
+    interface Tx  {
+        + StmtContext(ctx context.Context, stmt *sql.Stmt) *sql.Stmt
+
+    }
+    interface TxBeginner  {
+        + BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+
+    }
+    interface TxCommitter  {
+        + Commit() error
+        + Rollback() error
+
+    }
+    interface Valuer  {
+        + GormValue( context.Context,  *DB) clause.Expr
+
+    }
+    class ViewOption << (S,Aquamarine) >> {
+        + Replace bool
+        + CheckOption string
+        + Query *DB
+
+    }
+    class assignBack << (S,Aquamarine) >> {
+        + Source reflect.Value
+        + Index int
+        + Dest reflect.Value
+
+    }
+    class callback << (S,Aquamarine) >> {
+        - name string
+        - before string
+        - after string
+        - remove bool
+        - replace bool
+        - match <font color=blue>func</font>(*DB) bool
+        - handler <font color=blue>func</font>(*DB) 
+        - processor *processor
+
+        + Before(name string) *callback
+        + After(name string) *callback
+        + Register(name string, fn <font color=blue>func</font>(*DB) ) error
+        + Remove(name string) error
+        + Replace(name string, fn <font color=blue>func</font>(*DB) ) error
+
+    }
+    class callbacks << (S,Aquamarine) >> {
+        - processors <font color=blue>map</font>[string]*processor
+
+        + Create() *processor
+        + Query() *processor
+        + Update() *processor
+        + Delete() *processor
+        + Row() *processor
+        + Raw() *processor
+
+    }
+    class gorm.DeletedAt << (T, #FF7700) >>  {
+    }
+    class gorm.ScanMode << (T, #FF7700) >>  {
+    }
+    class join << (S,Aquamarine) >> {
+        + Name string
+        + Conds []<font color=blue>interface</font>{}
+        + On *clause.Where
+        + Selects []string
+        + Omits []string
+        + JoinType clause.JoinType
+
+    }
+    class processor << (S,Aquamarine) >> {
+        - db *DB
+        - fns []<font color=blue>func</font>(*DB) 
+        - callbacks []*callback
+
+        + Clauses []string
+
+        - compile() error
+
+        + Execute(db *DB) *DB
+        + Get(name string) <font color=blue>func</font>(*DB) 
+        + Before(name string) *callback
+        + After(name string) *callback
+        + Match(fc <font color=blue>func</font>(*DB) bool) *callback
+        + Register(name string, fn <font color=blue>func</font>(*DB) ) error
+        + Remove(name string) error
+        + Replace(name string, fn <font color=blue>func</font>(*DB) ) error
+
+    }
+    class "sql.NullTime" as sqlNullTime {
+        'This class was created so that we can correctly have an alias pointing to this name. Since it contains dots that can break namespaces
+    }
+}
+"gorm.Dialector" *-- "gorm.Config"
+"gorm.Config" *-- "gorm.DB"
+"gorm.ConnPool" *-- "gorm.PreparedStmtDB"
+"gorm.Tx" *-- "gorm.PreparedStmtTX"
+"gorm.DB" *-- "gorm.Statement"
+"sql.Stmt" *-- "gorm.Stmt"
+"gorm.ConnPool" *-- "gorm.Tx"
+"gorm.TxCommitter" *-- "gorm.Tx"
+
+"gorm.Option" <|-- "gorm.Config"
+"gorm.ConnPoolBeginner" <|-- "gorm.PreparedStmtDB"
+"gorm.GetDBConnector" <|-- "gorm.PreparedStmtDB"
+"gorm.GetDBConnector" <|-- "gorm.PreparedStmtTX"
+"gorm.TxCommitter" <|-- "gorm.PreparedStmtTX"
+"gorm.StatementModifier" <|-- "gorm.SoftDeleteDeleteClause"
+"gorm.StatementModifier" <|-- "gorm.SoftDeleteQueryClause"
+"gorm.StatementModifier" <|-- "gorm.SoftDeleteUpdateClause"
+
+"gorm.Association" o-- "gorm.DB"
+"gorm.Association" o-- "schema.Relationship"
+"gorm.Config" o-- "clause.ClauseBuilder"
+"gorm.Config" o-- "gorm.ConnPool"
+"gorm.Config" o-- "gorm.Plugin"
+"gorm.Config" o-- "gorm.callbacks"
+"gorm.Config" o-- "logger.Interface"
+"gorm.Config" o-- "schema.Namer"
+"gorm.Config" o-- "sync.Map"
+"gorm.DB" o-- "gorm.Statement"
+"gorm.Model" o-- "gorm.DeletedAt"
+"gorm.Model" o-- "time.Time"
+"gorm.PreparedStmtDB" o-- "gorm.Stmt"
+"gorm.PreparedStmtDB" o-- "sync.RWMutex"
+"gorm.PreparedStmtTX" o-- "gorm.PreparedStmtDB"
+"gorm.Session" o-- "context.Context"
+"gorm.Session" o-- "logger.Interface"
+"gorm.SoftDeleteDeleteClause" o-- "schema.Field"
+"gorm.SoftDeleteDeleteClause" o-- "sql.NullString"
+"gorm.SoftDeleteQueryClause" o-- "schema.Field"
+"gorm.SoftDeleteQueryClause" o-- "sql.NullString"
+"gorm.SoftDeleteUpdateClause" o-- "schema.Field"
+"gorm.SoftDeleteUpdateClause" o-- "sql.NullString"
+"gorm.Statement" o-- "clause.Clause"
+"gorm.Statement" o-- "clause.Expr"
+"gorm.Statement" o-- "context.Context"
+"gorm.Statement" o-- "gorm.ConnPool"
+"gorm.Statement" o-- "gorm.join"
+"gorm.Statement" o-- "reflect.Value"
+"gorm.Statement" o-- "schema.Schema"
+"gorm.Statement" o-- "strings.Builder"
+"gorm.Statement" o-- "sync.Map"
+"gorm.ViewOption" o-- "gorm.DB"
+"gorm.assignBack" o-- "reflect.Value"
+"gorm.callback" o-- "gorm.processor"
+"gorm.callbacks" o-- "gorm.processor"
+"gorm.join" o-- "clause.JoinType"
+"gorm.join" o-- "clause.Where"
+"gorm.processor" o-- "gorm.DB"
+"gorm.processor" o-- "gorm.callback"
+
+"__builtin__.uint8" #.. "gorm.ScanMode"
+"gorm.sqlNullTime" #.. "gorm.DeletedAt"
+hide methods
+@enduml
